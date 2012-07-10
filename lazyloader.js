@@ -16,7 +16,7 @@ YUI.add('lazyloader', function(Y) {
 	
 	/**
 	 * YUI3懒加载组件构造函数
-	 * @class Lazyload 
+	 * @class LazyLoader 
 	 * @constructor
 	 * @extends Base
 	 */
