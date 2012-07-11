@@ -1,0 +1,1 @@
+{"tagline":"a simple lazyload widget based on yui3","note":"Don't delete this file! It's used internally to help with page regeneration.","google":"yui3-lazyload","body":"YUI3 LazyLoad\r\n=============\r\n\r\n* LazyLoader 懒加载器，负责管理懒加载对象实例及监控视窗位置\r\n* LazyLoadItem 懒加载对象，需要懒加载内容的对象实例\r\n* ExecScript 过滤并内容执行内容中的脚本（todo 待优化）","name":"YUI3 LazyLoad Widget"}
