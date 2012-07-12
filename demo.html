@@ -30,7 +30,7 @@
 	</head>
 	<body>
 		<div class="lazyload yui3-lazyloaditem-loading">
-			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p><script>console.log('inline script')</script></textarea>
+			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p><p>inline script</p><script>console.log('inline script')</script></textarea>
 		</div>
 		<div class="lazyload yui3-lazyloaditem-loading">
 			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p></textarea>
@@ -42,7 +42,9 @@
 			<script class="yui3-lazyloaditem-lazynode" type="text/lazyloaditem"><p>It works!</p></script>
 		</div>
 		<div class="lazyload yui3-lazyloaditem-loading">
-			<xmp class="yui3-lazyloaditem-lazynode"><p>It works!</p></xmp>
+			<xmp class="yui3-lazyloaditem-lazynode"><p>MultiContent 1</p></xmp>
+			<xmp class="yui3-lazyloaditem-lazynode"><p>MultiContent 2</p></xmp>
+			<xmp class="yui3-lazyloaditem-lazynode"><p>MultiContent 3</p></xmp>
 		</div>
 		<div class="lazyload yui3-lazyloaditem-loading">
 			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p></textarea>
@@ -54,33 +56,25 @@
 			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p></textarea>
 		</div>
 		<div class="lazyload yui3-lazyloaditem-loading">
-			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p><script src="http://code.jquery.com/jquery-1.7.2.min.js" charset="gbk"></script></textarea>
+			<textarea class="yui3-lazyloaditem-lazynode"><p>It works!</p><p>outline script</p><script src="http://code.jquery.com/jquery-1.7.2.min.js" charset="gbk"></script></textarea>
 		</div>
 		<div class="jsonp-lazyload yui3-lazyloaditem-loading"></div>
 		<script>
 			YUI().use('lazyloaditem', 'lazyloader', 'transition', 'jsonp', function(Y) {
 				var loader = new Y.LazyLoader({
-					fold: 50
-				});
-				var item;
-				Y.all('.lazyload').each(function(node, index) {
-					item = new Y.LazyLoadItem({
-						container: node
-					});
-					item.on('load', function(e) {
-						e.content += ('<p>lazyload content ' + (index + 1) + '</p>');
-					});
-					loader.addItem(item);
+					fold: 50,
+					items: '.lazyload',
+					loadScript: true
 				});
 				var jsonpItem = new Y.LazyLoadItem({
 					container: '.jsonp-lazyload',
 					source: {
-						url: 'http://baoxian.taobao.com/car/cityprefer/issupport.do?cityCode=450500&comId=1009&callback={callback}',
-						cfg: {}
+						url: 'http://baoxian.taobao.com/car/cityprefer/issupport.do?cityCode=450500&comId=1009&callback={callback}'
 					},
 					parser: function(content) {
-						return Y.Lang.sub('<p>cityCode={cityCode}</p><p>comId={comId}</p>', content[0]);
-					}
+						return Y.Lang.sub('<p>cityCode={cityCode}</p><p>comId={comId}</p><p>JSONP Content</p><script>alert("loadScript");</' + 'script>', content[0]);
+					},
+					loadScript: true
 				});
 				loader.addItem(jsonpItem);
 			});

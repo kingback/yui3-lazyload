@@ -109,6 +109,17 @@ YUI.add('lazyloaditem', function(Y) {
 		parser: {
 			value: DEF_PARSER,
 			validator: Y.Lang.isFunction
+		},
+		
+		/**
+		 * 是否加载内容中的脚本
+		 * @attribute loadScript
+		 * @default false
+		 * @type boolean
+		 */
+		loadScript: {
+			value: false,
+			validator: Y.Lang.isBoolean
 		}
 	};
 	
@@ -148,21 +159,31 @@ YUI.add('lazyloaditem', function(Y) {
 		/**
 		 * 加载懒加载内容
 		 * @method load
+		 * @return this
 		 */
 		load: function() {
 			if (this.get('loaded') || this.get('loading') || !this._container) { return false; }
 			this._container.addClass('yui3-lazyloaditem-loading');
 			this.set('loading', true);
 			this.loadContent();
+			
+			return this;
 		},
 		
 		/**
 		 * 检查对象是否在区域范围内
 		 * @method fetch
 		 * @param {Object} within 范围
+		 * @return this
 		 */
 		fetch: function(within) {
 			if (this.get('loaded') || this.get('loading') || !this._container || !within || (!within.withinX && !within.withinY)) { return false; }
+			
+			//强制直接加载
+			if (within === true) {
+				this.load();
+				return this;
+			}
 			
 			var XY = this._container.getXY(),
 				isWithinX = true,
@@ -179,11 +200,14 @@ YUI.add('lazyloaditem', function(Y) {
 			if (isWithinX && isWithinY) {
 				this.load();
 			}
+			
+			return this;
 		},
 		
 		/**
 		 * 加载内容
 		 * @method loadContent
+		 * @return this
 		 */
 		loadContent: function() {
 			var source = this.get('source');
@@ -200,35 +224,110 @@ YUI.add('lazyloaditem', function(Y) {
 					this._loadIOContent(source.url, source.cfg);
 				}
 			}
+			
+			return this;
 		},
 		
 		/**
 		 * 插入内容
 		 * @method insert
-		 * @param {String} content 需要插入的内容
+		 * @param {String | Array} content 需要插入的内容
+		 * @return this
 		 */
-		insert: function(content) {
-			var match = Y.ExecScript.matchScript(content),
-				html = match.html,
-				scripts = match.scripts;
-				
-			this._container.appendChild(Y.Node.create(html));
-			while (scripts.length) {
-				Y.ExecScript.exec(scripts.shift());
+		insert: function(content, relNode) {
+			if (Y.Lang.isArray(content)) {
+				Y.Array.each(content, function(c) {
+					this.insert(c, relNode);
+				}, this);
+				return this;
 			}
+			
+			if (Y.Lang.isObject(content)) {
+				relNode = content.relNode;
+				content = content.content;
+			}
+			
+			var r = this.filterScripts(content),
+				frag = r.frag,
+				scripts = r.scripts;
+				
+			this._container.insertBefore(frag, relNode || null);
+			this.get('loadScript') && this.insertScripts(scripts);
+			
+			return this;
 		},
 		
+		/**
+		 * 过滤脚本
+		 * @method filterScripts
+		 * @param {String} content 内容片段 
+		 * @return {Object} 返回过滤后的内容片段及脚本
+		 */
+		filterScripts: function(content) {
+			var frag = Y.Node.create(content),
+				scripts = [];
+				
+			frag.all('script').each(function(s) {
+				var _s = s._node,
+					attrs = _s.attributes,
+					src = _s.src,
+					type = _s.type,
+					n = document.createElement('script');
+					
+				if (!type || type == 'text/javascript') {
+					if (!src) {
+						n.text = _s.text;
+					}
+					Y.Array.each(attrs, function(attr) {
+						n.setAttribute(attr.nodeName, attr.nodeValue);
+					});
+					scripts.push(n);
+					frag.removeChild(s);
+				}
+			});
+			
+			return {
+				frag: frag._node,
+				scripts: scripts
+			};
+		},
+		
+		/**
+		 * 插入脚本
+		 * @method insertScripts
+		 * @param {Array} scripts 需要加载的脚本数组
+		 * @return this
+		 */
+		insertScripts: function(scripts) {
+			var head = document.getElementsByTagName('head')[0];
+				
+			while (scripts.length) {
+				head.appendChild(scripts.shift());
+			}
+			
+			return this;
+		},
+		
+		//TODO
+		//容器内加载多个延迟加载的内容
+		//只针对DOM Content？
 		/**
 		 * 加载html内容
 		 * @method _loadDOMContent
 		 */
 		_loadDOMContent: function() {
-			var lazyNode = this._container.one('.yui3-lazyloaditem-lazynode'),
-				content;
+			var lazyNodes = this._container.all('.yui3-lazyloaditem-lazynode'),
+				content = [];
 			
-			if (!lazyNode) { return false; }
+			if (!lazyNodes.size()) { return false; }
 			
-			content = lazyNode.get(lazyNode.get('tagName') === 'textarea' ? 'value' : 'innerHTML').replace(/&lt;/ig,'<').replace(/&gt;/ig,'>');
+			lazyNodes.each(function(node) {
+				content.push({
+					relNode: node,
+					content: Y.Lang.trim(node.get(node.get('tagName') === 'textarea' ? 'value' : 'innerHTML').replace(/&lt;/ig,'<').replace(/&gt;/ig,'>'))
+				});
+			});
+			
 			this._contentReady(content);
 		},
 		

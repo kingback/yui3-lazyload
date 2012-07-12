@@ -48,6 +48,28 @@ YUI.add('lazyloader', function(Y) {
 		 */
 		fold: {
 			value: 0
+		},
+		
+		/**
+		 * 初始化的实例
+		 * @attribute items
+		 * @default null
+		 * @type object
+		 */
+		items: {
+			value: null,
+			setter: Y.all
+		},
+		
+		/**
+		 * 加载脚本
+		 * @attribute loadScript
+		 * @default false
+		 * @type boolean
+		 */
+		loadScript: {
+			value: false,
+			validator: Y.Lang.isBoolean
 		}
 	};
 	
@@ -62,6 +84,7 @@ YUI.add('lazyloader', function(Y) {
 		initializer: function() {
 			this._events = [];
 			this._items = {};
+			this._initItems();
 		},
 		
 		/**
@@ -75,68 +98,111 @@ YUI.add('lazyloader', function(Y) {
 		/**
 		 * 检查实例是否在视窗以内（上）
 		 * @method fetch
+		 * @param {Boolean} force 强制加载所有实例
+		 * @return this
 		 */
-		fetch: function() {
+		fetch: function(force) {
 			var viewportRegion = Y.DOM.viewportRegion(),
 				fold = this.get('fold') || 0,
 				within = {
 					withinX: viewportRegion.left + viewportRegion.width + fold,
 					withinY: viewportRegion.top + viewportRegion.height + fold
 				};
+			
+			force = force === true ? true : false;
 				
 			Y.Object.each(this._items, function(v, k) {
-				v.fetch(within);
+				v.fetch(force || within);
 			});
+			
+			return this;
 		},
 		
 		/**
 		 * 添加懒加载实例（lazyloaditem）
 		 * @method addItem
  		 * @param {Object} item
+ 		 * @return this
 		 */
 		addItem: function(item) {
+			if (!(item instanceof Y.LazyLoadItem)) {
+				if ((item = Y.one(item))) {
+					item = new Y.LazyLoadItem({
+						container: item
+					});
+					item.set('loadScript', this.get('loadScript'));
+					this.addItem(item);
+				}
+				return this;
+			}
+			
 			var itemId = item.get('itemId');
+			
 			if (!this._events.length) {
-				this.bindEvent();
+				this._bindEvent();
 			}
 			this._items[itemId] = item;
 			item.after('load', function(e) {
 				this.removeItem(item);
 			}, this);
 			this.fetch();
+			
+			return this;
 		},
 		
 		/**
 		 * 移除懒加载实例（lazyloaditem）
 		 * @method removeItem
  		 * @param {Object} item
+ 		 * @return this
 		 */
 		removeItem: function(item) {
 			var itemId = item.get('itemId');
+			
 			if (this._items.hasOwnProperty(itemId) && this._items[itemId]) {
 				delete this._items[itemId];
 			}
 			if (!Y.Object.size(this._items)) {
-				this.detachEvent();
+				this._detachEvent();
 			}
+			
+			return this;
 		},
 		
 		/**
 		 * 清空懒加载实例
 		 * @method empty
  		 * @param {Object} item
+ 		 * @return this
 		 */
 		empty: function() {
 			Y.Object.each(this._items, function(v, k) {
 				this.removeItem(v);
 			}, this);
+			
+			return this;
+		},
+		
+		/**
+		 * 初始化懒加载实例
+		 * @method _initItems
+		 */
+		_initItems: function() {
+			var items = this.get('items'),
+				item;
+				
+			if (items) {
+				items.each(function(node) {
+					this.addItem(node);
+				}, this);
+			}
 		},
 		
 		/**
 		 * 绑定页面窗口滚动与缩放事件
-		 * @method bindEvent
+		 * @method _bindEvent
 		 */
-		bindEvent: function() {
+		_bindEvent: function() {
 			this._events.push(
 				Y.on(['scroll','resize'], function(e) {
 					this.fetch();
@@ -146,9 +212,9 @@ YUI.add('lazyloader', function(Y) {
 		
 		/**
 		 * 解除页面窗口滚动与缩放事件的绑定
-		 * @method detachEvent
+		 * @method _detachEvent
 		 */
-		detachEvent: function() {
+		_detachEvent: function() {
 			while (this._events.length) {
 				this._events.shift().detach();
 			}
