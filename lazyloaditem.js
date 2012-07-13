@@ -279,7 +279,11 @@ YUI.add('lazyloaditem', function(Y) {
 						n.text = _s.text;
 					}
 					Y.Array.each(attrs, function(attr) {
-						n.setAttribute(attr.nodeName, attr.nodeValue);
+						//IE6, 7可能会返回很多未指定的HTML特性
+						//Hack
+						if (attr.specified) {
+							n.setAttribute(attr.nodeName, attr.nodeValue);
+						}
 					});
 					scripts.push(n);
 					frag.removeChild(s);
